@@ -1,0 +1,63 @@
+version: "3"
+
+services:
+  db:
+    platform: linux/x86_64
+    image: mysql:5.7
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./init.sql:/data/application/init.sql
+    restart: always
+    environment:
+        MYSQL_ROOT_PASSWORD: pwd
+    ports:
+      - "3306:3306"
+    command: --init-file /data/application/init.sql
+    networks:
+      - erth-test1-net
+
+  phpmyadmin:
+    depends_on:
+      - db
+    image: phpmyadmin/phpmyadmin
+    restart: always
+    ports:
+      - "8090:80"
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      PMA_ARBITRARY: 1
+    networks:
+      - erth-test1-net
+
+  restapi:
+    image: "ystef11/erth_test:restapi"
+    restart: always
+    ports:
+      - "1080:1080"
+    networks:
+      - erth-test1-net
+      
+  main:
+    depends_on:
+      - db
+      - restapi
+    image: "ystef11/erth_test:main"
+    restart: always
+    deploy:
+      mode: replicated
+      replicas: 2
+    environment:
+      MYSQL_HOST: db
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: admin
+      MYSQL_BATCH: 5
+      SBP_HOST: restapi
+    networks:
+      - erth-test1-net
+
+networks:
+  erth-test1-net:
+
+volumes:
+  db_data:
